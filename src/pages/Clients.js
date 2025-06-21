@@ -5,7 +5,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-const API_URL = 'http://localhost:5000/api/clients';
+const API_URL = process.env.REACT_APP_API_URL + '/clients';
 
 export default function Clients() {
   const [clients, setClients] = useState([]);
@@ -22,9 +22,7 @@ export default function Clients() {
       const res = await fetch(API_URL);
       const data = await res.json();
       setClients(data);
-    } catch (err) {
-      // يمكن عرض رسالة خطأ هنا
-    }
+    } catch (err) {}
     setLoading(false);
   };
 
@@ -64,7 +62,7 @@ export default function Clients() {
           body: JSON.stringify(form)
         });
       }
-      fetchClients();
+      await fetchClients();
       setOpen(false);
     } catch (err) {}
     setLoading(false);
@@ -75,7 +73,7 @@ export default function Clients() {
     setLoading(true);
     try {
       await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-      fetchClients();
+      await fetchClients();
     } catch (err) {}
     setLoading(false);
   };

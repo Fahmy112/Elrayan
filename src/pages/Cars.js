@@ -5,8 +5,8 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-const API_CARS = 'http://localhost:5000/api/cars';
-const API_CLIENTS = 'http://localhost:5000/api/clients';
+const API_CARS = process.env.REACT_APP_API_URL + '/cars';
+const API_CLIENTS = process.env.REACT_APP_API_URL + '/clients';
 
 export default function Cars() {
   const [cars, setCars] = useState([]);
@@ -17,7 +17,7 @@ export default function Cars() {
   const [form, setForm] = useState({ model: '', plate: '', client: '' });
   const [loading, setLoading] = useState(false);
 
-  // جلب السيارات والعملاء
+  // جلب السيارات والعم��اء
   const fetchCars = async () => {
     setLoading(true);
     try {
@@ -72,7 +72,7 @@ export default function Cars() {
           body: JSON.stringify(form)
         });
       }
-      fetchCars();
+      await fetchCars();
       setOpen(false);
     } catch (err) {}
     setLoading(false);
@@ -83,7 +83,7 @@ export default function Cars() {
     setLoading(true);
     try {
       await fetch(`${API_CARS}/${id}`, { method: 'DELETE' });
-      fetchCars();
+      await fetchCars();
     } catch (err) {}
     setLoading(false);
   };
@@ -113,7 +113,7 @@ export default function Cars() {
   return (
     <Box>
       <Typography variant="h4" fontWeight={700} color="primary.main" mb={2}>
-        إدارة الس��ارات
+        إدارة السيارات
       </Typography>
       <Paper sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>

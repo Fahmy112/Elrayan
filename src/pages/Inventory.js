@@ -5,7 +5,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-const API_URL = 'http://localhost:5000/api/inventory';
+const API_URL = process.env.REACT_APP_API_URL + '/inventory';
 
 export default function Inventory() {
   const [items, setItems] = useState([]);
@@ -62,7 +62,7 @@ export default function Inventory() {
           body: JSON.stringify(form)
         });
       }
-      fetchItems();
+      await fetchItems();
       setOpen(false);
     } catch (err) {}
     setLoading(false);
@@ -73,7 +73,7 @@ export default function Inventory() {
     setLoading(true);
     try {
       await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-      fetchItems();
+      await fetchItems();
     } catch (err) {}
     setLoading(false);
   };

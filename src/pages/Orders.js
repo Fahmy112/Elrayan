@@ -4,10 +4,10 @@ import { DataGrid } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-const API_ORDERS = 'http://localhost:5000/api/orders';
-const API_CLIENTS = 'http://localhost:5000/api/clients';
-const API_CARS = 'http://localhost:5000/api/cars';
-const API_INVENTORY = 'http://localhost:5000/api/inventory';
+const API_ORDERS = process.env.REACT_APP_API_URL + '/orders';
+const API_CLIENTS = process.env.REACT_APP_API_URL + '/clients';
+const API_CARS = process.env.REACT_APP_API_URL + '/cars';
+const API_INVENTORY = process.env.REACT_APP_API_URL + '/inventory';
 
 export default function Orders() {
   const [orders, setOrders] = useState([]);
@@ -54,7 +54,7 @@ export default function Orders() {
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
   const handleNewItemChange = e => setNewItem({ ...newItem, [e.target.name]: e.target.value });
 
-  // عند اختيار اسم صنف
+  // عن�� اختيار اسم صنف
   const handleSelectItemName = (event, value) => {
     if (value) {
       setNewItem({ ...newItem, itemName: value.name, barcode: value.barcode, itemPrice: value.sellPrice });
@@ -121,7 +121,7 @@ export default function Orders() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, items: form.items })
       });
-      fetchAll();
+      await fetchAll();
       setOpen(false);
     } catch (err) {}
     setLoading(false);
@@ -131,7 +131,7 @@ export default function Orders() {
     setLoading(true);
     try {
       await fetch(`${API_ORDERS}/${id}`, { method: 'DELETE' });
-      fetchAll();
+      await fetchAll();
     } catch (err) {}
     setLoading(false);
   };
