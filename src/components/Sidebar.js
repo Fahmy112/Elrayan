@@ -1,25 +1,21 @@
 import React from 'react';
 import { Drawer, List, ListItem, ListItemIcon, ListItemText, Toolbar } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
-import PeopleIcon from '@mui/icons-material/People';
-import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
-import AssignmentIcon from '@mui/icons-material/Assignment';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import { Link, useLocation } from 'react-router-dom';
 
 const drawerWidth = 220;
 
+// تعريف القائمة خارج المكون لتحسين الأداء
 const menu = [
-  { text: 'لوحة التحكم', icon: <DashboardIcon />, path: '/dashboard' },
-  { text: 'العملاء', icon: <PeopleIcon />, path: '/clients' },
-  { text: 'السيارات', icon: <DirectionsCarIcon />, path: '/cars' },
-  { text: 'الطلبات', icon: <AssignmentIcon />, path: '/orders' },
+  { text: ' الطلبات و الادارة', icon: <DashboardIcon />, path: '/dashboard' },
   { text: 'المخزون', icon: <InventoryIcon />, path: '/inventory' },
   { text: 'التقارير', icon: <BarChartIcon />, path: '/reports' },
 ];
 
-export default function Sidebar() {
+// استخدام React.memo لتقليل إعادة التصيير
+const Sidebar = React.memo(function Sidebar() {
   const location = useLocation();
   return (
     <Drawer
@@ -34,11 +30,10 @@ export default function Sidebar() {
       <List>
         {menu.map((item) => (
           <ListItem
-            button
             key={item.text}
             component={Link}
             to={item.path}
-            selected={location.pathname === item.path}
+            selected={location.pathname.startsWith(item.path)}
           >
             <ListItemIcon>{item.icon}</ListItemIcon>
             <ListItemText primary={item.text} />
@@ -47,4 +42,6 @@ export default function Sidebar() {
       </List>
     </Drawer>
   );
-}
+});
+
+export default Sidebar;

@@ -12,7 +12,7 @@ export default function Inventory() {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [form, setForm] = useState({ name: '', barcode: '', quantity: '', buyPrice: '', sellPrice: '' });
+  const [form, setForm] = useState({ name: '', quantity: '', buyPrice: '', sellPrice: '' });
   const [loading, setLoading] = useState(false);
 
   // جلب الأصناف من الـ API
@@ -33,10 +33,10 @@ export default function Inventory() {
   const handleOpen = (item = null) => {
     if (item) {
       setEditId(item._id);
-      setForm({ name: item.name, barcode: item.barcode, quantity: item.quantity, buyPrice: item.buyPrice, sellPrice: item.sellPrice });
+      setForm({ name: item.name, quantity: item.quantity, buyPrice: item.buyPrice, sellPrice: item.sellPrice });
     } else {
       setEditId(null);
-      setForm({ name: '', barcode: '', quantity: '', buyPrice: '', sellPrice: '' });
+      setForm({ name: '', quantity: '', buyPrice: '', sellPrice: '' });
     }
     setOpen(true);
   };
@@ -46,20 +46,26 @@ export default function Inventory() {
 
   // إضافة أو تعديل صنف
   const handleSave = async () => {
-    if (!form.name || !form.barcode || !form.quantity) return;
+    if (!form.name || !form.quantity) return;
     setLoading(true);
+    const payload = {
+      ...form,
+      quantity: Number(form.quantity),
+      buyPrice: Number(form.buyPrice),
+      sellPrice: Number(form.sellPrice)
+    };
     try {
       if (editId) {
         await fetch(`${API_URL}/${editId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form)
+          body: JSON.stringify(payload)
         });
       } else {
         await fetch(API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(form)
+          body: JSON.stringify(payload)
         });
       }
       await fetchItems();
@@ -79,12 +85,11 @@ export default function Inventory() {
   };
 
   const filtered = items.filter(i =>
-    i.name.includes(search) || i.barcode.includes(search)
+    i.name.includes(search)
   );
 
   const columns = [
     { field: 'name', headerName: 'اسم الصنف', flex: 1 },
-    { field: 'barcode', headerName: 'الباركود', flex: 1 },
     { field: 'quantity', headerName: 'الكمية', flex: 1 },
     { field: 'buyPrice', headerName: 'سعر الشراء', flex: 1 },
     { field: 'sellPrice', headerName: 'سعر البيع', flex: 1 },
@@ -109,7 +114,7 @@ export default function Inventory() {
       <Paper sx={{ p: 2, mb: 2 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <TextField
-            label="بحث بالاسم أو الباركود"
+            label="بحث بالاسم"
             value={search}
             onChange={e => setSearch(e.target.value)}
             sx={{ width: 300 }}
@@ -137,14 +142,6 @@ export default function Inventory() {
             label="اسم الصنف"
             name="name"
             value={form.name}
-            onChange={handleChange}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            label="الباركود"
-            name="barcode"
-            value={form.barcode}
             onChange={handleChange}
             fullWidth
             margin="normal"

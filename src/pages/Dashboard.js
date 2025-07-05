@@ -1,78 +1,110 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Typography, Box, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid, IconButton, Autocomplete } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { DataGrid } from '@mui/x-data-grid';
 
-// بيانات مخزون افتراضي
-const initialInventory = [
-  { barcode: '123456', name: 'فلتر زيت', quantity: 10, price: 100 },
-  { barcode: '789012', name: 'زيت محرك', quantity: 20, price: 250 },
-  { barcode: '345678', name: 'بوجيه', quantity: 15, price: 80 },
-];
+const API_ORDERS = process.env.REACT_APP_API_URL + '/orders';
+const API_INVENTORY = process.env.REACT_APP_API_URL + '/inventory';
+
+const initialForm = {
+  clientName: '',
+  clientPhone: '',
+  carModel: '',
+  carPlate: '',
+  serviceType: '',
+  maintenanceCost: '',
+  kilometers: '',
+  carComments: '',
+  items: [],
+};
+const initialNewItem = { itemName: '', itemQty: 1, itemPrice: '' };
 
 export default function Dashboard() {
-  // بيانات الطلبات (محلي فقط للعرض)
   const [orders, setOrders] = useState([]);
+  const [inventory, setInventory] = useState([]);
   const [open, setOpen] = useState(false);
-  const [inventory] = useState(initialInventory);
-  const [form, setForm] = useState({
-    clientName: '',
-    clientPhone: '',
-    carModel: '',
-    carPlate: '',
-    serviceType: '',
-    maintenanceCost: '', // تكلفة الصيانة
-    items: [], // [{barcode, name, qty, price}]
-  });
-  // صنف جديد للإضافة
-  const [newItem, setNewItem] = useState({ barcode: '', itemName: '', itemQty: 1, itemPrice: '' });
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [form, setForm] = useState(initialForm);
+  const [newItem, setNewItem] = useState(initialNewItem);
   const [itemError, setItemError] = useState('');
+  const [formError, setFormError] = useState('');
+
+  // جلب الطلبات والمخزون دفعة واحدة
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [ordersRes, inventoryRes] = await Promise.all([
+        fetch(API_ORDERS),
+        fetch(API_INVENTORY)
+      ]);
+      setOrders(await ordersRes.json());
+      setInventory(await inventoryRes.json());
+    } catch (err) {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   // فتح وغلق النموذج
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => {
+  const handleOpen = useCallback(() => setOpen(true), []);
+  const handleClose = useCallback(() => {
     setOpen(false);
-    setForm({
-      clientName: '', clientPhone: '', carModel: '', carPlate: '', serviceType: '', maintenanceCost: '', items: []
-    });
-    setNewItem({ barcode: '', itemName: '', itemQty: 1, itemPrice: '' });
+    setForm({ ...initialForm });
+    setNewItem({ ...initialNewItem });
     setItemError('');
-  };
+    setFormError('');
+  }, []);
+
+  // البحث في الطلبات
+  const filtered = useMemo(() =>
+    orders.filter(o =>
+      (o.clientName || '').includes(search) ||
+      (o.carModel || '').includes(search) ||
+      (o.carPlate || '').includes(search)
+    ), [orders, search]
+  );
+
+  // اختيار الصنف في Autocomplete
+  const selectedInventoryItem = useMemo(
+    () => newItem.itemName ? inventory.find(i => i.name === newItem.itemName) || null : null,
+    [newItem.itemName, inventory]
+  );
 
   // تغيير بيانات النموذج الرئيسي
-  const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = useCallback(e => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value ?? '' }));
+  }, []);
 
   // تغيير بيانات الصنف الجديد
-  const handleNewItemChange = e => setNewItem({ ...newItem, [e.target.name]: e.target.value });
+  const handleNewItemChange = useCallback(e => {
+    const { name, value } = e.target;
+    setNewItem(n => ({ ...n, [name]: value ?? '' }));
+  }, []);
 
   // عند اختيار اسم صنف من Autocomplete
-  const handleSelectItemName = (event, value) => {
+  const handleSelectItemName = useCallback((event, value) => {
     if (value) {
-      setNewItem({ ...newItem, itemName: value.name, barcode: value.barcode, itemPrice: value.price });
+      setNewItem(n => ({ ...n, itemName: value.name, itemPrice: value.price }));
     } else {
-      setNewItem({ ...newItem, itemName: '', barcode: '', itemPrice: '' });
+      setNewItem(n => ({ ...n, itemName: '', itemPrice: '' }));
     }
-  };
-
-  // عند إدخال باركود: إذا وجد في المخزون، يتم تعبئة الاسم والسعر تلقائيًا
-  const handleBarcodeBlur = () => {
-    if (newItem.barcode) {
-      const found = inventory.find(i => i.barcode === newItem.barcode);
-      if (found) {
-        setNewItem(n => ({ ...n, itemName: found.name, itemPrice: found.price }));
-      }
-    }
-  };
+  }, []);
 
   // حساب السعر الإجمالي للصنف الجديد
-  const newItemTotal = newItem.itemPrice && newItem.itemQty ? Number(newItem.itemPrice) * Number(newItem.itemQty) : 0;
+  const newItemTotal = useMemo(() =>
+    newItem.itemPrice && newItem.itemQty ? Number(newItem.itemPrice) * Number(newItem.itemQty) : 0,
+    [newItem.itemPrice, newItem.itemQty]
+  );
 
   // إضافة صنف مستخدم في الطلب
-  const handleAddItem = () => {
+  const handleAddItem = useCallback(() => {
     let found = null;
-    if (newItem.barcode) {
-      found = inventory.find(i => i.barcode === newItem.barcode);
-    } else if (newItem.itemName) {
+    if (newItem.itemName) {
       found = inventory.find(i => i.name === newItem.itemName);
     }
     if (!found) {
@@ -87,121 +119,194 @@ export default function Dashboard() {
       setItemError('يرجى إدخال سعر بيع صحيح');
       return;
     }
-    setForm({
-      ...form,
-      items: [...form.items, { barcode: found.barcode, name: found.name, qty: Number(newItem.itemQty), price: Number(newItem.itemPrice) }],
-    });
-    setNewItem({ barcode: '', itemName: '', itemQty: 1, itemPrice: '' });
+    setForm(f => ({
+      ...f,
+      items: [...f.items, { name: found.name, qty: Number(newItem.itemQty), price: Number(newItem.itemPrice) }],
+    }));
+    setNewItem({ itemName: '', itemQty: 1, itemPrice: '' });
     setItemError('');
-  };
+  }, [newItem, inventory]);
 
   // حذف صنف من الطلب
-  const handleRemoveItem = (barcode) => {
-    setForm({ ...form, items: form.items.filter(i => i.barcode !== barcode) });
-  };
+  const handleRemoveItem = useCallback((idx) => {
+    setForm(f => ({ ...f, items: f.items.filter((_, i) => i !== idx) }));
+  }, []);
 
   // حساب إجمالي مبلغ البضائع
-  const itemsTotal = form.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const itemsTotal = useMemo(() =>
+    form.items.reduce((sum, item) => sum + (item.price * item.qty), 0),
+    [form.items]
+  );
   // حساب المجموع الكلي (البضائع + تكلفة الصيانة)
   const maintenanceCostNum = Number(form.maintenanceCost) || 0;
   const total = itemsTotal + maintenanceCostNum;
 
   // حفظ الطلب
-  const handleSave = () => {
-    if (!form.clientName || !form.clientPhone || !form.carModel || !form.carPlate || !form.serviceType) return;
-    setOrders([...orders, {
-      ...form,
-      id: Date.now(),
-      date: new Date().toLocaleString(),
-      itemsTotal,
-      total,
-    }]);
-    handleClose();
-  };
+  const handleSave = useCallback(async () => {
+    setFormError('');
+    if (!form.clientName || !form.clientPhone || !form.carModel || !form.carPlate || !form.serviceType) {
+      setFormError('جميع الحقول مطلوبة');
+      return;
+    }
+    setLoading(true);
+    try {
+      const payload = { ...form, items: form.items };
+      Object.keys(payload).forEach(k => {
+        if (payload[k] === undefined || payload[k] === null) payload[k] = '';
+      });
+      payload.items = payload.items.map(i => ({
+        name: i.name || '',
+        qty: i.qty || 0,
+        price: i.price || 0
+      }));
+      const res = await fetch(API_ORDERS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const newOrder = await res.json();
+        setOrders(prev => [newOrder, ...prev]);
+        handleClose();
+      }
+    } catch (err) {}
+    setLoading(false);
+  }, [form, handleClose]);
+
+  // حذف طلب
+  const handleDelete = useCallback(async (id) => {
+    setLoading(true);
+    try {
+      await fetch(`${API_ORDERS}/${id}`, { method: 'DELETE' });
+      await fetchAll();
+    } catch (err) {}
+    setLoading(false);
+  }, [fetchAll]);
+
+  const columns = [
+    { field: 'date', headerName: 'التاريخ', flex: 1, valueGetter: params => params?.row?.createdAt ? new Date(params.row.createdAt).toLocaleString() : '' },
+    { field: 'clientName', headerName: 'اسم العميل', flex: 1 },
+    { field: 'clientPhone', headerName: 'هاتف العميل', flex: 1 },
+    { field: 'carModel', headerName: 'موديل السيارة', flex: 1 },
+    { field: 'carPlate', headerName: 'رقم اللوحة', flex: 1 },
+    { field: 'serviceType', headerName: 'نوع الصيانة', flex: 1 },
+    { field: 'maintenanceCost', headerName: 'تكلفة الصيانة', flex: 1 },
+    {
+      field: 'itemsTotal',
+      headerName: 'إجمالي البضائع',
+      flex: 1,
+      valueGetter: params =>
+        params.row && Array.isArray(params.row.items)
+          ? params.row.items.reduce((sum, item) => sum + (item.price * item.qty), 0)
+          : 0
+    },
+    {
+      field: 'total',
+      headerName: 'المجموع الكلي',
+      flex: 1,
+      valueGetter: params => {
+        const itemsSum = params.row && Array.isArray(params.row.items)
+          ? params.row.items.reduce((sum, item) => sum + (item.price * item.qty), 0)
+          : 0;
+        const maintenance = Number(params.row?.maintenanceCost) || 0;
+        return itemsSum + maintenance;
+      }
+    },
+    {
+      field: 'actions',
+      headerName: 'إجراءات',
+      width: 100,
+      renderCell: (params) => (
+        <IconButton color="error" onClick={() => handleDelete(params.row._id)}><DeleteIcon /></IconButton>
+      ),
+    },
+  ];
 
   return (
     <Box>
       <Typography variant="h4" fontWeight={700} color="primary.main" mb={2}>
         لوحة التحكم
       </Typography>
-      <Paper sx={{ p: 3, mb: 2 }}>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
-          طلب جديد
-        </Button>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <TextField
+            label="بحث بالعميل أو السيارة أو اللوحة"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            sx={{ width: 300 }}
+          />
+          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpen}>
+            إضافة طلب
+          </Button>
+        </Box>
+        <div style={{ height: 400, width: '100%' }}>
+          <DataGrid
+            rows={filtered.map(o => ({ ...o, id: o._id }))}
+            columns={columns}
+            pageSize={5}
+            rowsPerPageOptions={[5, 10]}
+            disableSelectionOnClick
+            loading={loading}
+            localeText={{ noRowsLabel: 'لا يوجد بيانات' }}
+          />
+        </div>
       </Paper>
-      {/* عرض الطلبات الأخيرة */}
-      {orders.length > 0 && (
-        <Paper sx={{ p: 2, mt: 2 }}>
-          <Typography variant="h6" mb={2}>آخر الطلبات</Typography>
-          <Box component="ul" sx={{ pl: 2 }}>
-            {orders.slice(-5).reverse().map(order => (
-              <li key={order.id}>
-                {order.date} - {order.clientName} - {order.carModel} - {order.serviceType} - المجموع الكلي: {order.total} ج.م
-              </li>
-            ))}
-          </Box>
-        </Paper>
-      )}
       {/* Dialog نموذج الطلب الجديد */}
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>طلب صيانة جديد</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} mt={1}>
-            <Grid item xs={12} sm={6}>
-              <TextField label="اسم العميل" name="clientName" value={form.clientName} onChange={handleChange} fullWidth required />
+            <Grid>
+              <TextField label="اسم العميل" name="clientName" value={form.clientName ?? ''} onChange={handleChange} fullWidth required />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField label="رقم الهاتف" name="clientPhone" value={form.clientPhone} onChange={handleChange} fullWidth required />
+            <Grid>
+              <TextField label="رقم الهاتف" name="clientPhone" value={form.clientPhone ?? ''} onChange={handleChange} fullWidth required />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField label="موديل السيارة" name="carModel" value={form.carModel} onChange={handleChange} fullWidth required />
+            <Grid>
+              <TextField label="موديل السيارة" name="carModel" value={form.carModel ?? ''} onChange={handleChange} fullWidth required />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField label="رقم اللوحة" name="carPlate" value={form.carPlate} onChange={handleChange} fullWidth required />
+            <Grid>
+              <TextField label="رقم اللوحة" name="carPlate" value={form.carPlate ?? ''} onChange={handleChange} fullWidth required />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField label="نوع الصيانة" name="serviceType" value={form.serviceType} onChange={handleChange} fullWidth required />
+            <Grid>
+              <TextField label="نوع الصيانة" name="serviceType" value={form.serviceType ?? ''} onChange={handleChange} fullWidth required />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField label="تكلفة الصيانة" name="maintenanceCost" value={form.maintenanceCost} onChange={handleChange} fullWidth type="number" />
+            <Grid>
+              <TextField label="تكلفة الصيانة" name="maintenanceCost" value={form.maintenanceCost ?? ''} onChange={handleChange} fullWidth type="number" />
+            </Grid>
+            <Grid>
+              <TextField label="عدد الكيلومترات" name="kilometers" value={form.kilometers ?? ''} onChange={handleChange} fullWidth required />
+            </Grid>
+            <Grid>
+              <TextField
+                label="ملاحظات على السيارة"
+                name="carComments"
+                value={form.carComments ?? ''}
+                onChange={handleChange}
+                fullWidth
+                multiline
+                minRows={2}
+              />
             </Grid>
             {/* البضائع المستخدمة */}
-            <Grid item xs={12}>
+            <Grid>
               <Typography fontWeight={600} mb={1}>البضائع المستخدمة في الصيانة</Typography>
-              <Grid container spacing={1} alignItems="center">
-                <Grid item xs={3}>
-                  <Autocomplete
-                    options={inventory}
-                    getOptionLabel={option => option.name}
-                    value={newItem.itemName ? inventory.find(i => i.name === newItem.itemName) || null : null}
-                    onChange={handleSelectItemName}
-                    renderInput={(params) => (
-                      <TextField {...params} label="اسم الصنف" name="itemName" />
-                    )}
-                    isOptionEqualToValue={(option, value) => option.name === value.name}
-                  />
-                </Grid>
-                <Grid item xs={3}>
-                  <TextField
-                    label="باركود الصنف"
-                    name="barcode"
-                    value={newItem.barcode}
-                    onChange={handleNewItemChange}
-                    onBlur={handleBarcodeBlur}
-                    fullWidth
-                  />
-                </Grid>
-                <Grid item xs={2}>
-                  <TextField label="الكمية" name="itemQty" value={newItem.itemQty} onChange={handleNewItemChange} type="number" fullWidth />
-                </Grid>
-                <Grid item xs={2}>
-                  <TextField label="سعر البيع" name="itemPrice" value={newItem.itemPrice} onChange={handleNewItemChange} type="number" fullWidth />
-                </Grid>
-                <Grid item xs={2}>
-                  <Button onClick={handleAddItem} variant="outlined">إضافة</Button>
-                </Grid>
-              </Grid>
-              {/* عرض السعر الإجمالي للصنف الجديد */}
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Autocomplete
+                  options={inventory}
+                  getOptionLabel={option => option.name}
+                  value={selectedInventoryItem}
+                  onChange={handleSelectItemName}
+                  renderInput={(params) => (
+                    <TextField {...params} label="اسم الصنف" name="itemName" />
+                  )}
+                  isOptionEqualToValue={(option, value) => option.name === value.name}
+                  sx={{ minWidth: 180 }}
+                />
+                <TextField label="الكمية" name="itemQty" value={newItem.itemQty ?? 1} onChange={handleNewItemChange} type="number" fullWidth sx={{ minWidth: 100 }} />
+                <TextField label="سعر البيع" name="itemPrice" value={newItem.itemPrice ?? ''} onChange={handleNewItemChange} type="number" fullWidth sx={{ minWidth: 100 }} />
+                <Button onClick={handleAddItem} variant="outlined">إضافة</Button>
+              </Box>
               {newItem.itemPrice && newItem.itemQty > 0 && (
                 <Typography mt={1} color="primary.main">
                   إجمالي هذا الصنف: {newItemTotal} ج.م
@@ -209,10 +314,10 @@ export default function Dashboard() {
               )}
               {itemError && <Typography color="error" mt={1}>{itemError}</Typography>}
               <Box component="ul" sx={{ pl: 2, mt: 1 }}>
-                {form.items.map(item => (
-                  <li key={item.barcode}>
-                    {item.name} (باركود: {item.barcode}) × {item.qty} بسعر {item.price} ج.م = <b>{item.price * item.qty} ج.م</b>
-                    <IconButton size="small" color="error" onClick={() => handleRemoveItem(item.barcode)}><DeleteIcon fontSize="small" /></IconButton>
+                {form.items.map((item, idx) => (
+                  <li key={idx}>
+                    {item.name} × {item.qty} بسعر {item.price} ج.م = <b>{item.price * item.qty} ج.م</b>
+                    <IconButton size="small" color="error" onClick={() => handleRemoveItem(idx)}><DeleteIcon fontSize="small" /></IconButton>
                   </li>
                 ))}
               </Box>
@@ -222,6 +327,7 @@ export default function Dashboard() {
               <Typography mt={1} fontWeight={700} color="secondary.main">
                 المجموع الكلي (البضائع + الصيانة): {total} ج.م
               </Typography>
+              {formError && <Typography color="error" mt={2}>{formError}</Typography>}
             </Grid>
           </Grid>
         </DialogContent>
