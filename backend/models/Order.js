@@ -1,13 +1,19 @@
 import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema({
-  client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client', required: true },
-  car: { type: mongoose.Schema.Types.ObjectId, ref: 'Car', required: true },
+  // الحقول القديمة (للتوافق مع الطلبات القديمة)
+  client: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
+  car: { type: mongoose.Schema.Types.ObjectId, ref: 'Car' },
+  // الحقول الجديدة
+  clientName: { type: String },
+  clientPhone: { type: String },
+  carModel: { type: String },
+  carPlate: { type: String },
   serviceType: { type: String, required: true },
   maintenanceCost: { type: Number, default: 0 },
+  kilometers: { type: Number, default: 0 },
   items: [
     {
-      barcode: String,
       name: String,
       qty: Number,
       price: Number

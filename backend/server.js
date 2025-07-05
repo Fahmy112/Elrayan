@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import compression from 'compression';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -9,6 +10,7 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/elrayan';
 // Middlewares
 app.use(cors());
 app.use(express.json());
+app.use(compression());
 
 // Routes
 import clientsRoutes from './routes/clients.js';

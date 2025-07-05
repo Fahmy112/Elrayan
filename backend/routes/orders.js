@@ -22,11 +22,10 @@ router.get('/', async (req, res) => {
 // إضافة طلب جديد
 router.post('/', async (req, res) => {
   try {
-    const { client, car, serviceType, maintenanceCost, items } = req.body;
-    // تحقق من وجود العميل والسيارة
-    const clientExists = await Client.findById(client);
-    const carExists = await Car.findById(car);
-    if (!clientExists || !carExists) return res.status(400).json({ error: 'العميل أو السيارة غير موجود' });
+    // الحقول الجديدة
+    const { clientName, clientPhone, carModel, carPlate, serviceType, maintenanceCost, items } = req.body;
+    // الحقول القديمة (للتوافق)
+    const { client, car } = req.body;
     // حساب إجمالي البضائع والمجموع الكلي
     const itemsTotal = items.reduce((sum, item) => sum + (item.price * item.qty), 0);
     const total = itemsTotal + Number(maintenanceCost || 0);
@@ -43,6 +42,10 @@ router.post('/', async (req, res) => {
     const order = new Order({
       client,
       car,
+      clientName,
+      clientPhone,
+      carModel,
+      carPlate,
       serviceType,
       maintenanceCost,
       items,
@@ -50,7 +53,7 @@ router.post('/', async (req, res) => {
       total
     });
     await order.save();
-    res.status(201).json(await order.populate('client').populate({ path: 'car', populate: { path: 'client' } }));
+    res.status(201).json(order);
   } catch (err) {
     res.status(400).json({ error: 'تعذر إضافة الطلب' });
   }

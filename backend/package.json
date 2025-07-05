@@ -8,6 +8,10 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "@mui/icons-material": "^7.2.0",
+    "@mui/material": "^7.2.0",
+    "@mui/x-data-grid": "^8.7.0",
+    "compression": "^1.8.0",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "mongodb": "^6.17.0",
