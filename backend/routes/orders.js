@@ -55,7 +55,8 @@ router.post('/', async (req, res) => {
     await order.save();
     res.status(201).json(order);
   } catch (err) {
-    res.status(400).json({ error: 'تعذر إضافة الطلب' });
+    console.error('Order creation error:', err);
+    res.status(400).json({ error: 'تعذر إضافة الطلب', details: err?.message });
   }
 });
 
