@@ -6,7 +6,7 @@ import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 
-const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Orders = lazy(() => import('./pages/Orders'));
 const Inventory = lazy(() => import('./pages/Inventory'));
 const Reports = lazy(() => import('./pages/Reports'));
 
@@ -24,10 +24,10 @@ function App() {
             <Box sx={{ p: 3 }}>
               <Suspense fallback={<div>جاري التحميل...</div>}>
                 <Routes>
-                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/orders" element={<Orders />} />
                   <Route path="/inventory" element={<Inventory />} />
                   <Route path="/reports" element={<Reports />} />
-                  <Route path="*" element={<Navigate to="/dashboard" />} />
+                  <Route path="*" element={<Navigate to="/orders" />} />
                 </Routes>
               </Suspense>
             </Box>
