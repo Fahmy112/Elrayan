@@ -93,7 +93,7 @@ function Orders() {
         </Button>
       </Box>
       <DataGrid autoHeight
-        rows={orders.map((order, i) => ({ id: order._id || i, ...order }))}
+        rows={Array.isArray(orders) ? orders.map((order, i) => ({ id: order._id || i, ...order })) : []}
         columns={columns}
         loading={loading}
         pageSize={8}
